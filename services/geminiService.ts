@@ -1,13 +1,25 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { SuggestionResponse } from "../types";
 
-const apiKey = process.env.API_KEY || '';
+// Safely access process.env to avoid crashes in browser environments (Vite, etc.)
+const getApiKey = () => {
+  try {
+    if (typeof process !== 'undefined' && process.env && process.env.API_KEY) {
+      return process.env.API_KEY;
+    }
+  } catch (e) {
+    // Ignore error if process is not defined
+  }
+  return '';
+};
+
+const apiKey = getApiKey();
 const ai = new GoogleGenAI({ apiKey });
 
 export const generateWatermarkSuggestions = async (base64Image: string): Promise<string[]> => {
   if (!apiKey) {
     console.warn("API Key is missing. Returning default suggestions.");
-    return ["© Copyright 2024", "Protected", "Do Not Copy"];
+    return ["© Copyright 2024", "Protected", "Do Not Copy", "Watermark", "Private"];
   }
 
   // Remove data URL prefix if present to get raw base64

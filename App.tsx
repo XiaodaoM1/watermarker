@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import ControlPanel from './components/ControlPanel';
 import { WatermarkSettings, DEFAULT_SETTINGS } from './types';
 import { generateWatermarkSuggestions } from './services/geminiService';
-import { Upload, Download, Image as ImageIcon, AlertCircle } from 'lucide-react';
+import { Upload, Download, Image as ImageIcon } from 'lucide-react';
 
 function App() {
   const [settings, setSettings] = useState<WatermarkSettings>(DEFAULT_SETTINGS);
@@ -16,7 +16,7 @@ function App() {
 
   // Load Image
   const handleFile = (file: File) => {
-    if (!file.type.startsWith('image/')) return;
+    if (!file || !file.type.startsWith('image/')) return;
     
     const reader = new FileReader();
     reader.onload = (e) => {
@@ -75,9 +75,9 @@ function App() {
       const textW = textMetrics.width;
       
       // Calculate spacing based on gap setting
-      // Base spacing is text width/height + some padding
-      const spacingX = textW + (image.width * settings.gap / 200) + fontSizePx;
-      const spacingY = fontSizePx * 3 + (image.width * settings.gap / 200);
+      // Prevent infinite loop with minimum spacing
+      const spacingX = Math.max(textW + (image.width * settings.gap / 200) + fontSizePx, 20);
+      const spacingY = Math.max(fontSizePx * 3 + (image.width * settings.gap / 200), 20);
 
       // Rotation Setup
       const angleRad = (settings.rotation * Math.PI) / 180;
