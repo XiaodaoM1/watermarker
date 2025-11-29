@@ -1,5 +1,9 @@
+
 export interface WatermarkSettings {
+  type: 'text' | 'image';
   text: string;
+  image: string | null; // Data URL of the uploaded watermark image
+  imageScale: number; // Scale factor 1-100 (percentage of main image width)
   color: string;
   opacity: number; // 0 to 1
   fontSize: number; // Scale factor 1-100 (percentage of image width)
@@ -10,7 +14,10 @@ export interface WatermarkSettings {
 }
 
 export const DEFAULT_SETTINGS: WatermarkSettings = {
+  type: 'text',
   text: '© Watermark',
+  image: null,
+  imageScale: 15,
   color: '#ffffff',
   opacity: 0.8,
   fontSize: 5,

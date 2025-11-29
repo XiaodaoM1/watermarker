@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import ControlPanel from './components/ControlPanel';
 import { WatermarkSettings, DEFAULT_SETTINGS } from './types';
@@ -7,6 +8,7 @@ import { Upload, Download, Image as ImageIcon } from 'lucide-react';
 function App() {
   const [settings, setSettings] = useState<WatermarkSettings>(DEFAULT_SETTINGS);
   const [image, setImage] = useState<HTMLImageElement | null>(null);
+  const [watermarkImgObj, setWatermarkImgObj] = useState<HTMLImageElement | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [suggestions, setSuggestions] = useState<string[]>([]);
@@ -14,7 +16,7 @@ function App() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Load Image
+  // Load Main Image
   const handleFile = (file: File) => {
     if (!file || !file.type.startsWith('image/')) return;
     
@@ -29,6 +31,19 @@ function App() {
     };
     reader.readAsDataURL(file);
   };
+
+  // Load Watermark Image whenever settings.image changes
+  useEffect(() => {
+    if (settings.type === 'image' && settings.image) {
+      const img = new Image();
+      img.onload = () => {
+        setWatermarkImgObj(img);
+      };
+      img.src = settings.image;
+    } else {
+      setWatermarkImgObj(null);
+    }
+  }, [settings.image, settings.type]);
 
   const onDragOver = (e: React.DragEvent) => {
     e.preventDefault();
@@ -58,32 +73,41 @@ function App() {
     canvas.height = image.height;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // Draw Image
+    // Draw Main Image
     ctx.drawImage(image, 0, 0);
 
-    // Watermark Configuration
-    const fontSizePx = (image.width * settings.fontSize) / 100;
-    ctx.font = `bold ${fontSizePx}px Inter, sans-serif`;
-    ctx.fillStyle = settings.color;
+    // Prepare Watermark properties
     ctx.globalAlpha = settings.opacity;
-    ctx.textBaseline = 'middle';
-    ctx.textAlign = 'center';
+    
+    // Calculate size and content to draw
+    let contentWidth = 0;
+    let contentHeight = 0;
+
+    if (settings.type === 'text') {
+      const fontSizePx = (image.width * settings.fontSize) / 100;
+      ctx.font = `bold ${fontSizePx}px Inter, sans-serif`;
+      ctx.fillStyle = settings.color;
+      ctx.textBaseline = 'middle';
+      ctx.textAlign = 'center';
+      
+      const metrics = ctx.measureText(settings.text);
+      contentWidth = metrics.width;
+      contentHeight = fontSizePx; // Approx height
+    } else if (settings.type === 'image' && watermarkImgObj) {
+      // Calculate scaled dimensions for image watermark
+      contentWidth = (image.width * settings.imageScale) / 100;
+      contentHeight = contentWidth * (watermarkImgObj.height / watermarkImgObj.width);
+    }
+
+    // Common transforms
+    const angleRad = (settings.rotation * Math.PI) / 180;
 
     if (settings.isTiled) {
       // Tiled Pattern
-      const textMetrics = ctx.measureText(settings.text);
-      const textW = textMetrics.width;
-      
-      // Calculate spacing based on gap setting
-      // Prevent infinite loop with minimum spacing
-      const spacingX = Math.max(textW + (image.width * settings.gap / 200) + fontSizePx, 20);
-      const spacingY = Math.max(fontSizePx * 3 + (image.width * settings.gap / 200), 20);
+      // Calculate spacing
+      const spacingX = Math.max(contentWidth + (image.width * settings.gap / 200), 20);
+      const spacingY = Math.max(contentHeight * 2 + (image.width * settings.gap / 200), 20);
 
-      // Rotation Setup
-      const angleRad = (settings.rotation * Math.PI) / 180;
-      
-      // Create a grid larger than the canvas to cover rotation edges
-      // Use a large constant buffer to ensure coverage
       const diag = Math.sqrt(canvas.width ** 2 + canvas.height ** 2);
       
       for (let y = -diag; y < diag * 2; y += spacingY) {
@@ -94,7 +118,12 @@ function App() {
           
           ctx.translate(x + rowOffset, y);
           ctx.rotate(angleRad);
-          ctx.fillText(settings.text, 0, 0);
+          
+          if (settings.type === 'text') {
+             ctx.fillText(settings.text, 0, 0);
+          } else if (settings.type === 'image' && watermarkImgObj) {
+             ctx.drawImage(watermarkImgObj, -contentWidth/2, -contentHeight/2, contentWidth, contentHeight);
+          }
           ctx.restore();
         }
       }
@@ -104,31 +133,47 @@ function App() {
       let y = canvas.height / 2;
       const padding = Math.max(20, image.width * 0.05);
 
-      // Horizontal
-      if (settings.position.endsWith('l')) {
-        x = padding;
-        ctx.textAlign = 'left';
-      } else if (settings.position.endsWith('r')) {
-        x = canvas.width - padding;
-        ctx.textAlign = 'right';
-      }
-
-      // Vertical
-      if (settings.position.startsWith('t')) {
-        y = padding;
-        ctx.textBaseline = 'top';
-      } else if (settings.position.startsWith('b')) {
-        y = canvas.height - padding;
-        ctx.textBaseline = 'bottom';
+      if (settings.type === 'text') {
+          // Adjust anchor for text since we change textAlign based on position
+          // Horizontal
+          if (settings.position.endsWith('l')) {
+            x = padding;
+            ctx.textAlign = 'left';
+          } else if (settings.position.endsWith('r')) {
+            x = canvas.width - padding;
+            ctx.textAlign = 'right';
+          }
+          // Vertical
+          if (settings.position.startsWith('t')) {
+            y = padding;
+            ctx.textBaseline = 'top';
+          } else if (settings.position.startsWith('b')) {
+            y = canvas.height - padding;
+            ctx.textBaseline = 'bottom';
+          }
+      } else {
+          // Logic for Image positioning (center based)
+          // Horizontal
+          if (settings.position.endsWith('l')) x = padding + contentWidth / 2;
+          else if (settings.position.endsWith('r')) x = canvas.width - padding - contentWidth / 2;
+          
+          // Vertical
+          if (settings.position.startsWith('t')) y = padding + contentHeight / 2;
+          else if (settings.position.startsWith('b')) y = canvas.height - padding - contentHeight / 2;
       }
 
       ctx.save();
       ctx.translate(x, y);
-      ctx.rotate((settings.rotation * Math.PI) / 180);
-      ctx.fillText(settings.text, 0, 0);
+      ctx.rotate(angleRad);
+      
+      if (settings.type === 'text') {
+        ctx.fillText(settings.text, 0, 0);
+      } else if (settings.type === 'image' && watermarkImgObj) {
+        ctx.drawImage(watermarkImgObj, -contentWidth/2, -contentHeight/2, contentWidth, contentHeight);
+      }
       ctx.restore();
     }
-  }, [image, settings]);
+  }, [image, settings, watermarkImgObj]);
 
   useEffect(() => {
     if (image) {
