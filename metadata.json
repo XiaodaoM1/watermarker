@@ -1,0 +1,5 @@
+{
+  "name": "Watermark Pro AI",
+  "description": "Professional image watermarking tool featuring customizable text, tiling, and AI-powered caption suggestions using Gemini Vision.",
+  "requestFramePermissions": []
+}
