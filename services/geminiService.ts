@@ -1,5 +1,6 @@
+
 import { GoogleGenAI, Type } from "@google/genai";
-import { SuggestionResponse } from "../types";
+import { SuggestionResponse, Language } from "../types";
 
 // Safely access process.env to avoid crashes in browser environments (Vite, etc.)
 const getApiKey = () => {
@@ -16,14 +17,22 @@ const getApiKey = () => {
 const apiKey = getApiKey();
 const ai = new GoogleGenAI({ apiKey });
 
-export const generateWatermarkSuggestions = async (base64Image: string): Promise<string[]> => {
+export const generateWatermarkSuggestions = async (base64Image: string, language: Language): Promise<string[]> => {
+  const fallback = language === 'zh' 
+    ? ["© 版权所有", "原创作品", "严禁复制", "水印", "仅供参考"]
+    : ["© Copyright 2024", "Protected", "Do Not Copy", "Watermark", "Private"];
+
   if (!apiKey) {
     console.warn("API Key is missing. Returning default suggestions.");
-    return ["© Copyright 2024", "Protected", "Do Not Copy", "Watermark", "Private"];
+    return fallback;
   }
 
   // Remove data URL prefix if present to get raw base64
   const cleanBase64 = base64Image.replace(/^data:image\/(png|jpg|jpeg|webp);base64,/, "");
+
+  const langInstruction = language === 'zh' 
+    ? "Generate suggestions in Simplified Chinese (简体中文). Keep them concise (2-6 characters)." 
+    : "Generate suggestions in English. Keep them under 5 words.";
 
   try {
     const response = await ai.models.generateContent({
@@ -37,7 +46,7 @@ export const generateWatermarkSuggestions = async (base64Image: string): Promise
             },
           },
           {
-            text: "Analyze this image and suggest 5 short, professional, or creative watermark texts. They could be witty captions, copyright tags, or brand-like names suitable for this specific photo. Keep them under 5 words.",
+            text: `Analyze this image and suggest 5 short, professional, or creative watermark texts. They could be witty captions, copyright tags, or brand-like names suitable for this specific photo. ${langInstruction}`,
           },
         ],
       },
@@ -57,13 +66,13 @@ export const generateWatermarkSuggestions = async (base64Image: string): Promise
     });
 
     const jsonText = response.text;
-    if (!jsonText) return ["© Copyright", "Original Content"];
+    if (!jsonText) return fallback;
     
     const parsed = JSON.parse(jsonText) as SuggestionResponse;
     return parsed.suggestions || [];
 
   } catch (error) {
     console.error("Gemini API Error:", error);
-    return ["© Copyright", "Draft", "Confidential", "Original Work"];
+    return fallback;
   }
 };

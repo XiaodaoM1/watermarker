@@ -1,9 +1,9 @@
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import ControlPanel from './components/ControlPanel';
-import { WatermarkSettings, DEFAULT_SETTINGS } from './types';
+import { WatermarkSettings, DEFAULT_SETTINGS, Language, TRANSLATIONS } from './types';
 import { generateWatermarkSuggestions } from './services/geminiService';
-import { Upload, Download, Image as ImageIcon } from 'lucide-react';
+import { Upload, Download, Image as ImageIcon, Languages } from 'lucide-react';
 
 function App() {
   const [settings, setSettings] = useState<WatermarkSettings>(DEFAULT_SETTINGS);
@@ -12,9 +12,19 @@ function App() {
   const [isDragging, setIsDragging] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [language, setLanguage] = useState<Language>('en');
   
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  const t = TRANSLATIONS[language];
+
+  // Update default text when language changes, if it's still default
+  useEffect(() => {
+    if (settings.text === TRANSLATIONS['en'].defaultWatermark || settings.text === TRANSLATIONS['zh'].defaultWatermark) {
+      setSettings(prev => ({ ...prev, text: t.defaultWatermark }));
+    }
+  }, [language, t.defaultWatermark]);
 
   // Load Main Image
   const handleFile = (file: File) => {
@@ -204,14 +214,18 @@ function App() {
     ctx?.drawImage(image, 0, 0, tempCanvas.width, tempCanvas.height);
     
     const base64 = tempCanvas.toDataURL('image/jpeg', 0.7);
-    const results = await generateWatermarkSuggestions(base64);
+    const results = await generateWatermarkSuggestions(base64, language);
     
     setSuggestions(results);
     setIsGenerating(false);
   };
 
+  const toggleLanguage = () => {
+    setLanguage(prev => prev === 'en' ? 'zh' : 'en');
+  };
+
   return (
-    <div className="flex flex-col lg:flex-row h-screen bg-zinc-950 overflow-hidden">
+    <div className="flex flex-col lg:flex-row h-screen bg-zinc-950 overflow-hidden font-sans">
       
       {/* Main Preview Area */}
       <div className="flex-1 relative flex flex-col h-full">
@@ -222,16 +236,27 @@ function App() {
               <ImageIcon className="text-white w-6 h-6" />
             </div>
             <div>
-                <h1 className="text-xl font-bold text-white tracking-tight">Watermark Pro AI</h1>
-                <p className="text-xs text-zinc-400">Secure your visual assets</p>
+                <h1 className="text-xl font-bold text-white tracking-tight">{t.appTitle}</h1>
+                <p className="text-xs text-zinc-400">{t.subtitle}</p>
             </div>
           </div>
           
-          {image && (
-            <div className="flex gap-3 pointer-events-auto">
+          <div className="flex gap-3 pointer-events-auto items-center">
+             {/* Language Switcher */}
+             <button
+                onClick={toggleLanguage}
+                className="bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-3 py-2 rounded-lg border border-zinc-700 transition-all flex items-center gap-2 text-xs font-bold mr-2"
+                title="Switch Language"
+             >
+                <Languages className="w-4 h-4" />
+                {language === 'en' ? 'EN' : '中'}
+             </button>
+
+             {image && (
+               <>
                 <label className="cursor-pointer bg-zinc-800 hover:bg-zinc-700 text-white px-4 py-2 rounded-lg border border-zinc-700 transition-all flex items-center gap-2 text-sm font-medium">
                     <Upload className="w-4 h-4" />
-                    Change Image
+                    <span className="hidden sm:inline">{t.changeImage}</span>
                     <input type="file" className="hidden" accept="image/*" onChange={(e) => e.target.files?.[0] && handleFile(e.target.files[0])} />
                 </label>
                 <button 
@@ -239,10 +264,11 @@ function App() {
                     className="bg-white hover:bg-zinc-200 text-zinc-900 px-4 py-2 rounded-lg shadow-lg shadow-white/10 transition-all flex items-center gap-2 text-sm font-bold"
                 >
                     <Download className="w-4 h-4" />
-                    Download
+                    <span className="hidden sm:inline">{t.download}</span>
                 </button>
-            </div>
-          )}
+               </>
+             )}
+          </div>
         </header>
 
         {/* Canvas / Drop Zone */}
@@ -265,10 +291,10 @@ function App() {
                     <div className="w-16 h-16 bg-zinc-800 rounded-full flex items-center justify-center mx-auto mb-6 shadow-xl">
                         <Upload className={`w-8 h-8 ${isDragging ? 'text-indigo-400' : 'text-zinc-500'}`} />
                     </div>
-                    <h3 className="text-lg font-semibold text-white mb-2">Upload an Image</h3>
-                    <p className="text-zinc-400 text-sm mb-6">Drag and drop your image here, or click to browse files.</p>
+                    <h3 className="text-lg font-semibold text-white mb-2">{t.uploadTitle}</h3>
+                    <p className="text-zinc-400 text-sm mb-6">{t.uploadDesc}</p>
                     <label className="cursor-pointer bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-3 rounded-xl transition-all inline-block font-medium shadow-lg shadow-indigo-500/25">
-                        Choose File
+                        {t.chooseFile}
                         <input type="file" className="hidden" accept="image/*" onChange={(e) => e.target.files?.[0] && handleFile(e.target.files[0])} />
                     </label>
                 </div>
@@ -286,7 +312,7 @@ function App() {
         {/* Helper Text */}
         {!image && (
              <div className="absolute bottom-6 left-0 right-0 text-center text-zinc-500 text-sm pointer-events-none">
-                Supported formats: PNG, JPG, WEBP
+                {t.supportedFormats}
              </div>
         )}
       </div>
@@ -299,6 +325,7 @@ function App() {
         isGenerating={isGenerating}
         suggestions={suggestions}
         onSelectSuggestion={(txt) => setSettings({...settings, text: txt})}
+        language={language}
       />
       
     </div>

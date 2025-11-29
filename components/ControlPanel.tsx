@@ -1,6 +1,6 @@
 
 import React, { useRef } from 'react';
-import { WatermarkSettings, POSITIONS } from '../types';
+import { WatermarkSettings, POSITIONS, TRANSLATIONS, Language } from '../types';
 import { Type, Palette, Move, Maximize, Grid3X3, Wand2, RefreshCw, LayoutGrid, Sparkles, Image as ImageIcon, Upload, Trash2 } from 'lucide-react';
 
 interface ControlPanelProps {
@@ -10,6 +10,7 @@ interface ControlPanelProps {
   isGenerating: boolean;
   suggestions: string[];
   onSelectSuggestion: (text: string) => void;
+  language: Language;
 }
 
 const ControlPanel: React.FC<ControlPanelProps> = ({ 
@@ -18,9 +19,11 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
   onGenerateAI, 
   isGenerating,
   suggestions,
-  onSelectSuggestion
+  onSelectSuggestion,
+  language
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const t = TRANSLATIONS[language];
   
   const update = (key: keyof WatermarkSettings, value: any) => {
     onChange({ ...settings, [key]: value });
@@ -42,7 +45,7 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-bold text-white flex items-center gap-2">
           <Palette className="w-5 h-5 text-indigo-500" />
-          Customize
+          {t.customize}
         </h2>
       </div>
 
@@ -56,7 +59,7 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
               : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-700/50'
           }`}
         >
-          <Type className="w-4 h-4" /> Text
+          <Type className="w-4 h-4" /> {t.text}
         </button>
         <button
           onClick={() => update('type', 'image')}
@@ -66,7 +69,7 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
               : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-700/50'
           }`}
         >
-          <ImageIcon className="w-4 h-4" /> Image
+          <ImageIcon className="w-4 h-4" /> {t.image}
         </button>
       </div>
 
@@ -74,7 +77,7 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
       {settings.type === 'text' && (
         <div className="space-y-3 animate-in fade-in slide-in-from-left-4 duration-300">
           <label className="text-sm font-medium text-zinc-400 flex items-center gap-2">
-            <Type className="w-4 h-4" /> Watermark Text
+            <Type className="w-4 h-4" /> {t.watermarkText}
           </label>
           <div className="flex gap-2">
             <input
@@ -82,7 +85,7 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
               value={settings.text}
               onChange={(e) => update('text', e.target.value)}
               className="flex-1 bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 placeholder-zinc-500"
-              placeholder="© Your Name"
+              placeholder={language === 'zh' ? '© 你的名字' : '© Your Name'}
             />
             <button
               onClick={onGenerateAI}
@@ -92,7 +95,7 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
                   ? 'bg-indigo-500/10 cursor-not-allowed text-indigo-300' 
                   : 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-500/20'
               }`}
-              title="Generate with AI"
+              title={t.generateAi}
             >
               <Wand2 className={`w-5 h-5 ${isGenerating ? 'animate-spin' : ''}`} />
             </button>
@@ -120,7 +123,7 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
       {settings.type === 'image' && (
         <div className="space-y-3 animate-in fade-in slide-in-from-right-4 duration-300">
            <label className="text-sm font-medium text-zinc-400 flex items-center gap-2">
-            <ImageIcon className="w-4 h-4" /> Upload Logo
+            <ImageIcon className="w-4 h-4" /> {t.uploadLogo}
           </label>
           
           {!settings.image ? (
@@ -131,7 +134,7 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
                 <div className="w-10 h-10 bg-zinc-800 rounded-full flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
                    <Upload className="w-5 h-5 text-zinc-400 group-hover:text-indigo-400" />
                 </div>
-                <span className="text-xs text-zinc-400">Click to upload PNG/JPG</span>
+                <span className="text-xs text-zinc-400">{t.clickUpload}</span>
              </div>
           ) : (
              <div className="relative bg-zinc-800 rounded-lg p-2 border border-zinc-700 flex items-center gap-3">
@@ -139,12 +142,12 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
                    <img src={settings.image} alt="Watermark" className="w-full h-full object-contain" />
                 </div>
                 <div className="flex-1 min-w-0">
-                   <p className="text-xs text-zinc-400 truncate">Watermark Image Loaded</p>
+                   <p className="text-xs text-zinc-400 truncate">{t.imageLoaded}</p>
                    <button 
                       onClick={() => fileInputRef.current?.click()}
                       className="text-xs text-indigo-400 hover:text-indigo-300 font-medium mt-1"
                    >
-                      Replace
+                      {t.replace}
                    </button>
                 </div>
                 <button 
@@ -168,7 +171,7 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
       {/* Tiled Toggle */}
       <div className="flex items-center justify-between bg-zinc-800/50 p-3 rounded-lg border border-zinc-700/50">
         <span className="text-sm font-medium text-zinc-300 flex items-center gap-2">
-          <Grid3X3 className="w-4 h-4" /> Tiled Mode
+          <Grid3X3 className="w-4 h-4" /> {t.tiledMode}
         </span>
         <button
           onClick={() => update('isTiled', !settings.isTiled)}
@@ -186,7 +189,7 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
       {!settings.isTiled && (
         <div className="space-y-3">
            <label className="text-sm font-medium text-zinc-400 flex items-center gap-2">
-            <Move className="w-4 h-4" /> Position
+            <Move className="w-4 h-4" /> {t.position}
           </label>
           <div className="grid grid-cols-3 gap-2 max-w-[200px] mx-auto bg-zinc-800 p-2 rounded-xl">
             {POSITIONS.map((pos) => (
@@ -198,7 +201,7 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
                     ? 'bg-indigo-600 shadow-inner ring-2 ring-indigo-400 ring-offset-2 ring-offset-zinc-800'
                     : 'bg-zinc-700 hover:bg-zinc-600 text-zinc-400'
                 }`}
-                title={pos.label}
+                title={t[`pos_${pos.id}`]}
               >
                 <div className={`w-2 h-2 rounded-full ${settings.position === pos.id ? 'bg-white' : 'bg-zinc-500'}`} />
               </button>
@@ -213,7 +216,7 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
         {/* Color Picker (Text Only) */}
         {settings.type === 'text' && (
           <div className="space-y-3">
-              <label className="text-sm font-medium text-zinc-400">Color</label>
+              <label className="text-sm font-medium text-zinc-400">{t.color}</label>
               <div className="flex gap-3 flex-wrap items-center">
                   {['#ffffff', '#000000', '#ef4444', '#f59e0b', '#10b981', '#3b82f6', '#8b5cf6'].map(c => (
                       <button
@@ -239,7 +242,7 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
         {/* Size Slider (Different for Text vs Image) */}
         <div className="space-y-3">
           <div className="flex justify-between text-sm">
-            <span className="text-zinc-400 flex items-center gap-2"><Maximize className="w-3 h-3"/> Size</span>
+            <span className="text-zinc-400 flex items-center gap-2"><Maximize className="w-3 h-3"/> {t.size}</span>
             <span className="text-zinc-200 font-mono">
                 {Math.round(settings.type === 'text' ? settings.fontSize : settings.imageScale)}%
             </span>
@@ -257,7 +260,7 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
         {/* Opacity */}
         <div className="space-y-3">
           <div className="flex justify-between text-sm">
-            <span className="text-zinc-400 flex items-center gap-2">Opacity</span>
+            <span className="text-zinc-400 flex items-center gap-2">{t.opacity}</span>
             <span className="text-zinc-200 font-mono">{Math.round(settings.opacity * 100)}%</span>
           </div>
           <input
@@ -274,7 +277,7 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
         {/* Rotation */}
         <div className="space-y-3">
           <div className="flex justify-between text-sm">
-             <span className="text-zinc-400 flex items-center gap-2"><RefreshCw className="w-3 h-3"/> Rotation</span>
+             <span className="text-zinc-400 flex items-center gap-2"><RefreshCw className="w-3 h-3"/> {t.rotation}</span>
              <span className="text-zinc-200 font-mono">{settings.rotation}°</span>
           </div>
           <input
@@ -291,7 +294,7 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
         {settings.isTiled && (
           <div className="space-y-3 animate-in slide-in-from-top-2">
             <div className="flex justify-between text-sm">
-              <span className="text-zinc-400 flex items-center gap-2"><LayoutGrid className="w-3 h-3"/> Spacing</span>
+              <span className="text-zinc-400 flex items-center gap-2"><LayoutGrid className="w-3 h-3"/> {t.spacing}</span>
               <span className="text-zinc-200 font-mono">{settings.gap}</span>
             </div>
             <input
@@ -308,7 +311,7 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
 
       <div className="mt-auto pt-6 border-t border-zinc-800">
         <p className="text-xs text-zinc-500 text-center">
-          Pro Tip: Use PNG files with transparency for image watermarks.
+          {t.proTip}
         </p>
       </div>
     </div>
